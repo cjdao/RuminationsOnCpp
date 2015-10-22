@@ -112,7 +112,6 @@ public:
 private:
         Super *p;             // 不能是Super p 或者 Super &p
 };
-
 ```
 
 #### 我们怎么通过Surrogate访问Super中的方法？
@@ -158,5 +157,39 @@ s.get()->f();
 ```
 
 * 方案四：不知道无没有
+
+#### 最后不要忘了
+Surrogate的拷贝构造函数，赋值操作符，及虚构函数！！！
+完整的Surrogate：
+```cpp
+class Surrogate{
+public:
+        Surrogate():p(0) {}   // Surrogate必须有默认构造函数!
+        Surrogate(const Super&s):p(s.clone()) {}
+        Surrogate(const Surrogate&s):p(s.p) {}
+	Surrogate &operator=(const Surrogate &s){
+		if (this!=&s) {
+			delete p;
+			p = s.p->clone();
+		}	
+		return *this;
+	}
+	~Surrogate(){delete p;}
+	
+
+	void f() {return p->f();} // 
+
+	Super * operator->(){return p;} // C++ 重载 ‘->’ 操作符！
+	Super & operator*(){return *p;} // C++ 重载 ‘*’ 操作符！
+
+	Super *get(){return p;}
+	//Super &get(){return *p;}
+
+private:
+        Super *p;             // 不能是Super p 或者 Super &p
+};
+```
+
+
 ### Code:
 
