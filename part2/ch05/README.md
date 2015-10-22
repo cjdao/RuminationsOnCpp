@@ -24,7 +24,7 @@ public:
 ```cpp
 vector<Super> v;
 ```
-像上面声明一个vector肯定是不行的，因为插入vector的子类如RoudVehicle都会被**切割**成父类Vehicle，下面的代码将无法正常运行：
+像上面声明一个vector肯定是不行的，因为插入vector的子类(如Sub1)都会被**切割**成父类Super，下面的代码将无法正常运行：
 ```cpp
 v.push_back(Sub1());
 v.back().f(); //ERROR, output "f() in super ."
@@ -32,7 +32,7 @@ v.back().f(); //ERROR, output "f() in super ."
 
 * 第二种方案：
 ```cpp
-vector<Super &> v; //ERROR, 木有引用类型的容器
+vector<Super &> v; //ERROR, 木有引用类型的容器啊
 ```
 
 * 第三种方案：
@@ -49,20 +49,94 @@ delete tmp;
 ```
 这种方法，虽然能够工作，但却为使用者带来了动态内容管理的负担。
 
-**使用类来表示概念**(在这里就是使用类来表示Super *这个概念);
+**使用类来表示概念**(在这里就是使用类来表示Super * 这个概念);
 
 * 第四种解决方案
-我们在方案三的基础上，添加一个中间层，用类来隐藏指针。
-我们来看看该怎么设计这个中间类(假设这个类的名字Surrogate)！
-首先，先想想我们会怎样使用这个中间类：
-第一它必须能被作为vector的元素类型，
+我们在方案三的基础上，添加一个**中间层**，用这个中间类(就叫Surrogate吧)来隐藏指针,并负责动态内存的管理。
+
+#### 我们来看看该怎么设计这个中间类!
+
+从我们会怎样使用这个中间类开始：
+首先它必须能被作为vector的元素类型，即:
+```cpp
+vector<Surrogate> v;
+```
+所以，Surrogate 必须有**默认构造函数**。
+
+然后，我们如何让一个Surrogate能够指向Sub继承树上的任何一类对象呢?
+让Surrogate有一个类型为‘Super * ’的数据成员，并通过Sub继承树上的任一类对象的拷贝构造Surrogate。
+```cpp
+Surrogate s0(Super()); // 不能是这样Surrogate s0(new Super());
+Surrogate s1(Sub1());
+Surrogate s2(Sub2());
+```
+
+所以，Surrogate的初步轮廓应该是这样的：
 ```cpp
 class Surrogate{
 public:
+	Surrogate():p(0) {}   // Surrogate必须有默认构造函数!
 	Surrogate(const Super&s):p(new /*我们在这里要new什么啊?*/) {}
 private:
-	Super *p;
+	Super *p;             // 不能是Super p 或者 Super &p
 };
+```
+在上面的Surrogate定义中，我们在其拷贝构造函数里遇到了问题，更具定义我们无法知道运行时的参数s到底是Sub继承树上的哪一个类,
+所以我们就无法new出我们期望的实体！
+
+解决这个问题的技巧在于，让Super定义一个叫clone的virtual函数，由各子类继承实现。因此我们的继承树就变成了这样：
+```cpp
+class Super{
+public:
+    virtual void f() {cout << "f() in super ."<< endl;}
+    virtual Super* clone() {return new Super();}
+};
+class Sub1:public Super{
+public:
+    virtual void f() {cout << "f() in sub1 ."<< endl;}
+    virtual Super* clone() {return new Sub1();}
+};
+class Sub2:public Super{
+public:
+    virtual void f() {cout << "f() in sub2 ."<< endl;}
+    virtual Super* clone() {return new Sub2();}
+};
+```
+于是，我们Surrogate类就这样这么实现：
+```cpp
+class Surrogate{
+public:
+        Surrogate():p(0) {}   // Surrogate必须有默认构造函数!
+        Surrogate(const Super&s):p(s.clone()) {}
+private:
+        Super *p;             // 不能是Super p 或者 Super &p
+};
+
+```
+
+#### 我们怎么通过Surrogate访问Super中的方法？
+* 方案一：直接在Surrogate中定义Super相应的方法
+```cpp
+class Surrogate{
+public:
+        /*....*/	
+	void f() {return p->f();} // 
+        /*....*/	
+};
+
+```
+
+* 方案二：重载Surrogate中的->操作符
+```cpp
+class Surrogate{
+public:
+        /*....*/	
+	Super * operator->(){return p;} // C++ 无法重载 ‘.’ 操作符！
+        /*....*/	
+};
+// 于是我们可以这样调用f方法：
+Surrogate s(Super());
+s->f();
 ```
 
 ### Code:
