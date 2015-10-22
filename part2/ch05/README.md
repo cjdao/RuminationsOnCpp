@@ -57,7 +57,8 @@ delete tmp;
 
 #### 我们来看看该怎么设计这个中间类!
 
-从我们会怎样使用这个中间类开始：
+从我们会怎样使用这个中间类开始:
+
 首先它必须能被作为vector的元素类型，即:
 ```cpp
 vector<Surrogate> v;
@@ -72,7 +73,7 @@ Surrogate s1(Sub1());
 Surrogate s2(Sub2());
 ```
 
-所以，Surrogate的初步轮廓应该是这样的：
+所以，Surrogate的初步轮廓应该是这样的:
 ```cpp
 class Surrogate{
 public:
@@ -159,8 +160,9 @@ s.get()->f();
 * 方案四：不知道无没有
 
 #### 最后不要忘了
-Surrogate的拷贝构造函数，赋值操作符，及虚构函数！！！
-完整的Surrogate：
+Surrogate的拷贝构造函数，赋值操作符，及虚构函数!!!
+
+完整的Surrogate:
 ```cpp
 class Surrogate{
 public:
