@@ -90,17 +90,17 @@ private:
 class Super{
 public:
     virtual void f() {cout << "f() in super ."<< endl;}
-    virtual Super* clone() {return new Super();}
+    virtual Super* clone()const {return new Super();}
 };
 class Sub1:public Super{
 public:
     virtual void f() {cout << "f() in sub1 ."<< endl;}
-    virtual Super* clone() {return new Sub1();}
+    virtual Super* clone()const {return new Sub1();}
 };
 class Sub2:public Super{
 public:
     virtual void f() {cout << "f() in sub2 ."<< endl;}
-    virtual Super* clone() {return new Sub2();}
+    virtual Super* clone()const {return new Sub2();}
 };
 ```
 于是，我们Surrogate类就这样这么实现：
@@ -166,28 +166,29 @@ class Surrogate{
 public:
         Surrogate():p(0) {}   // Surrogate必须有默认构造函数!
         Surrogate(const Super&s):p(s.clone()) {}
-        Surrogate(const Surrogate&s):p(s.p) {}
-	Surrogate &operator=(const Surrogate &s){
-		if (this!=&s) {
-			delete p;
-			p = s.p->clone();
-		}	
-		return *this;
-	}
-	~Surrogate(){delete p;}
-	
+        Surrogate(const Surrogate&s):p(s.p?s.p->clone():0) {}
+        Surrogate &operator=(const Surrogate &s){
+                if (this!=&s) {
+                        delete p;
+                        p = s.p->clone();
+                }
+                return *this;
+        }
+        ~Surrogate(){delete p;}
 
-	void f() {return p->f();} // 
 
-	Super * operator->(){return p;} // C++ 重载 ‘->’ 操作符！
-	Super & operator*(){return *p;} // C++ 重载 ‘*’ 操作符！
+        void f() {return p->f();} //
 
-	Super *get(){return p;}
-	//Super &get(){return *p;}
+        Super * operator->(){return p;} // C++ 重载 ‘->’ 操作符！
+        Super & operator*(){return *p;} // C++ 重载 ‘*’ 操作符！
+
+        Super *get(){return p;}
+        //Super &get(){return *p;}
 
 private:
         Super *p;             // 不能是Super p 或者 Super &p
 };
+
 ```
 
 
