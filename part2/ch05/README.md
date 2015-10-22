@@ -127,17 +127,36 @@ public:
 
 ```
 
-* 方案二：重载Surrogate中的->操作符
+* 方案二：重载Surrogate中的操作符
 ```cpp
 class Surrogate{
 public:
         /*....*/	
-	Super * operator->(){return p;} // C++ 无法重载 ‘.’ 操作符！
+	Super * operator->(){return p;} // C++ 重载 ‘->’ 操作符！
+	Super & operator*(){return *p;} // C++ 重载 ‘*’ 操作符！
+	// C++ 无法重载 ‘.’ 操作符！
         /*....*/	
 };
 // 于是我们可以这样调用f方法：
 Surrogate s(Super());
 s->f();
+(*s).f();
+```
+* 方案三：在Surrogate中定义get方法
+```cpp
+class Surrogate{
+public:
+	//......
+	Super *get(){return p;}
+	//Super &get(){return *p;}
+	//......
+};
+// 于是我们可以这样调用f方法：
+Surrogate s(Super());
+s.get()->f();
+// s.get().f();
 ```
 
+* 方案四：不知道无没有
 ### Code:
+
