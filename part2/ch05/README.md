@@ -38,8 +38,7 @@ vector<Super &> v; //ERROR, 木有引用类型的容器啊
 * 第三种方案：
 ```cpp
 vector<Super *> v;
-```
-```cpp
+
 v.push_back(new Sub1());
 v.back().f(); //OK, output "f() in sub1 ."
 // 你必须总是记得当你要删除一个vector中的元素时要像下面这样释放内存!
