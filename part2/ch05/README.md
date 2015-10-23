@@ -196,3 +196,7 @@ private:
 ### Code:
 
 [ch05.cpp](https://github.com/cjdao/RuminationsOnCpp/blob/master/part2/ch05/ch05.cpp)
+
+### Summary:
+1. 代理类能够实现对一支继承树的封装
+2. 被代理的类必须满足这样的需求：能实现运行时类型拷贝，即实现clone virtual函数
