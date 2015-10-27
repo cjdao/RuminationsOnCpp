@@ -4,18 +4,31 @@ using namespace std;
 template <typename T>
 class Array{
 public:
-	Array():data(0),size(0){}
-	Array(unsigned n):data(new T[n]), size(n){}
-	~Array(){delete [] data;}	
-	T& operator[](unsigned i) {return data[i];};
-	const T& operator[](unsigned i)const {return data[i];};
-	operator T*() {return data;}//数组可以转换成指向元素类型的指针	
-	operator const T*() const{return data;}//数组可以转换成指向元素类型的指针	
+	//unsigned n=0 使得Array有默认构造函数，因此可以创建类型为Array的Array,  
+    //然而这并没有什么卵用，因为Array不支持动态扩容，所以我们无法指定作为元素的Array的大小
+    Array(unsigned n=0):size(n),data(new T[size]){}
+    ~Array(){delete[] data;}
+    
+    // 支持下标操作(考虑const的情况)
+    const T& operator[](unsigned i) const{
+    	if (i>=size) 
+        	throw "";
+        return data[i];
+    }
+    // effective C++里条款３：尽可能使用const 里提到的技巧
+    T& operator[](unsigned i){
+		return const_cast<T &>(static_cast<const Array &>(*this)[i]);
+    }
+    
+    // 支持指针操作(考虑const的情况)
+    operator T*(){return data;}
+    operator const T*()const{ return data;}
 private:
-	Array(const Array&){}
-	Array& operator=(const Array&){}
-	T *data;
+	Array(const Array&);
+    Array &operator=(const Array &);
+
 	unsigned size;
+    T *data;
 };
 
 int main()
@@ -49,8 +62,17 @@ int main()
 	for (i=0; i!=100; i++) {
 		cout << *ip++ << " " ;
 	}
+	cout << endl << endl;
 
+	// const 数组
+	const Array<int> cai(100);
+	for (i=0; i!=100; i++) {
+		cout <<cai[i] << " "; 
+	// 我们可以读取数组的值，但无法给他赋值
+	//	cai[i] = i; // ERROR
+	}
 	cout << endl;
+	
 
 	return 0;
 }

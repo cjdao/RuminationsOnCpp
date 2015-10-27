@@ -15,7 +15,7 @@
 ### 怎样区分读和写
 有这样一种设计方式：提供一个update(i,x)的方法，用于改变容器中下标为i的元素的内容，而使operator[]操作符仅返回对象的副本。
 但是这种方式，无法处理容器的元素类型是容器的这种情况。
-**所以我们的设计选择一般是,让operator[]返回T& **
+**所以我们的设计选择一般是,让operator[]返回T&  **
 
 ### 怎样处理容器的增长
 * 区分向容器添加一个新的元素的操作和改变一个已有元素的操作
@@ -30,5 +30,44 @@
 ### 容器和继承
 不同元素类型的容器间不应该存在继承关系！(其讨论过程不是看得很懂)
 
+---------------------------------------------------------------
 
+### 设计一个类似与数组的容器类
+* 它是一个template,因为我们必须能够创建不同元素类型的容器
+* 它与数组一样贝构造函数和赋值操作符必须为private的
+* 它与数组一样，不支持动态扩容，即长度在创建时就决定了
+* 它与数组一样，支持下标和指针操作
+
+```cpp	
+template <typename T>
+class Array{
+public:
+	//unsigned n=0 使得Array有默认构造函数，因此可以创建类型为Array的Array,  
+    //然而这并没有什么卵用，因为Array不支持动态扩容，所以我们无法指定作为元素的Array的大小
+    Array(unsigned n=0):size(n),data(new T[size]){}
+    ~Array(){delete[] data;}
+    
+    // 支持下标操作(考虑const的情况)
+    const T& operator[](unsigned i) const{
+    	if (i>=size) 
+        	throw "";
+        return data[i];
+    }
+    // effective C++里条款３：尽可能使用const 里提到的技巧
+    T& operator[](unsigned i){
+		return const_cast<T &>(static_cast<const Array &>(*this)[i]);
+    }
+    
+    // 支持指针操作(考虑const的情况)
+    operator T*(){return data;}
+    operator const T*()const{ return data;}
+private:
+	Array(const Array&);
+    Array &operator=(const Array &);
+
+	unsigned size;
+    T *data;
+};
+```
+[示例代码](https://github.com/cjdao/RuminationsOnCpp/blob/master/part3/ch12/ch12.cpp)
 
