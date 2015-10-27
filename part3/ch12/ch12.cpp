@@ -11,8 +11,8 @@ public:
     
     // 支持下标操作(考虑const的情况)
     const T& operator[](unsigned i) const{
-    	if (i>=size) 
-        	throw "";
+    	if (i>=size || 0==data) 
+        	throw "Array subscript out of range.";
         return data[i];
     }
     // effective C++里条款３：尽可能使用const 里提到的技巧
@@ -21,8 +21,8 @@ public:
     }
     
     // 支持指针操作(考虑const的情况)
-    operator T*(){return data;}
     operator const T*()const{ return data;}
+    operator T*(){return data;}
 private:
 	Array(const Array&);
     Array &operator=(const Array &);
