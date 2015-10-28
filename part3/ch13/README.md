@@ -16,6 +16,7 @@ a.resize(20);
 cout << *p; // ERROR! p指针已经是无效的指针
 ```
 所以我们本章的目标是设计一种指针类(Pointer)，来解决上述问题。
+
 ### 第一个版本
 我们的第一个版本先设计一个指针类，让它的行为与原始指针类似。
 * 支持空指针
@@ -89,4 +90,7 @@ int main()
     return 0;
 } 
 ```
-[实例代码](https://github.com/cjdao/RuminationsOnCpp/tree/master/part3/ch13_v1.cpp)
+[实例代码](https://github.com/cjdao/RuminationsOnCpp/blob/master/part3/ch13/ch13_v1.cpp)
+
+### 第二个版本
+
