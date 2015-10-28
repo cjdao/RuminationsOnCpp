@@ -16,13 +16,13 @@ class ArrayData{
 	ArrayData(unsigned n=0):size(n),data(new T[size]),used(1){}
 	~ArrayData(){delete[] data;}
 
-    // 声明而不定义，禁止拷贝和赋值操作
+	// 声明而不定义，禁止拷贝和赋值操作
 	ArrayData(const ArrayData&);
-    ArrayData &operator=(const ArrayData &);
+	ArrayData &operator=(const ArrayData &);
 
-    // 支持下标操作(考虑const的情况)
-    const T& operator[](unsigned i) const{
-    	if (i>=size || 0==data) 
+	// 支持下标操作(考虑const的情况)
+	const T& operator[](unsigned i) const{
+	   	if (i>=size || 0==data) 
         	throw "ArrayData subscript out of range.";
         return data[i];
     }
@@ -36,7 +36,7 @@ class ArrayData{
     // operator T*(){return data;}
 
 	unsigned size;
-    T *data;
+	T *data;
 
 	int used;
 };
@@ -52,7 +52,7 @@ public:
     
     // 支持下标操作(考虑const的情况)
     const T& operator[](unsigned i) const{
-        return (*pa)[i];
+   		return (*pa)[i];
     }
     // 'effective C++ 条款3:尽可能使用const' 里提到的技巧
     T& operator[](unsigned i){
