@@ -1,40 +1,49 @@
-## 13章 
-### Question
-在第12章中，我们用Array类模拟了数组。而在Array类的实现中存在一个问题(数组也存在该问题)。先看例子：
-```cpp
-//访问无效指针
-int *p;
-{
-	Array<int> a(10);
-    p = &a[9];
-}
-cout << *p; // ERROR! p指针已经是无效的指针
+#include <iostream>
+#include <cassert> // for assert
 
-Array<int> a(10);
-p = &a[9];
-a.resize(20);
-cout << *p; // ERROR! p指针已经是无效的指针
-```
-所以我们本章的目标是设计一种指针类(Pointer)，来解决上述问题。
-### 第一个版本
-我们的第一个版本先设计一个指针类，让它的行为与原始指针类似。
-* 支持空指针
-* 支持指针间的拷贝与赋值
-* 支持指针绑定到数组的某个元素
-* 支持*和->操作
+// 数组类
+template <typename T>
+class Array{
+public:
+	//unsigned n=0 使得Array有默认构造函数，因此可以创建类型为Array的Array,  
+    //然而这并没有什么卵用，因为Array不支持动态扩容，所以我们无法指定作为元素的Array的大小
+    Array(unsigned n=0):size(n),data(new T[size]){}
+    ~Array(){delete[] data;}
+    
+    // 支持下标操作(考虑const的情况)
+    const T& operator[](unsigned i) const{
+    	if (i>=size || 0==data) 
+        	throw "Array subscript out of range.";
+        return data[i];
+    }
+    // effective C++里条款３：尽可能使用const 里提到的技巧
+    T& operator[](unsigned i){
+		return const_cast<T &>(static_cast<const Array &>(*this)[i]);
+    }
+    
+    // 不再支持原始指针操作
+    //operator const T*()const{ return data;}
+    //operator T*(){return data;}
+private:
+	Array(const Array&);
+    Array &operator=(const Array &);
 
-```cpp
+	unsigned size;
+    T *data;
+};
+
+// 指针类
 template<typename T>
 class Pointer{
 public:
     // 支持空指针
     Pointer():data(0),index(0){}
-    // 允许指针指向数组的某个元素
+    // 我们首先允许指针指向数组的某个元素
     Pointer(Array<T> &a, unsigned i=0):data(&a),index(i){}
     
     //指针间的拷贝与赋值, 让编译器代为实现^^
     
-    //允许针对指针进行解引用，及间接操作
+    //我们允许针对指针进行解引用，及间接操作
     T& operator*() const{
         if (!data)
             throw "* of unbound Pointer.";
@@ -53,10 +62,6 @@ private:
     unsigned index;
 };
 
-```
-所以，我们可以这么使用Pointer:
-
-```cpp
 // 测试类
 class Test{
 public:
@@ -87,6 +92,4 @@ int main()
     
     std::cout<<" --- OK."<<std::endl;
     return 0;
-} 
-```
-[实例代码](https://github.com/cjdao/RuminationsOnCpp/tree/master/part3/ch13_v1.cpp)
+}
