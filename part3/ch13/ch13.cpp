@@ -2,13 +2,21 @@
 
 using namespace std;
 
+template<typename T>
+class Pointer;
+template <typename T>
+class Array;
+
 // 数组实现类
 template <typename T>
 class ArrayData{
-public:
-    ArrayData(unsigned n=0):size(n),data(new T[size]),used(1){}
-    ~ArrayData(){delete[] data;}
-    
+	friend class Pointer<T>;
+	friend class Array<T>;
+
+	ArrayData(unsigned n=0):size(n),data(new T[size]),used(1){}
+	~ArrayData(){delete[] data;}
+
+    // 声明而不定义，禁止拷贝和赋值操作
 	ArrayData(const ArrayData&);
     ArrayData &operator=(const ArrayData &);
 
@@ -18,15 +26,14 @@ public:
         	throw "ArrayData subscript out of range.";
         return data[i];
     }
-    // effective C++里条款３：尽可能使用const 里提到的技巧
+    // 'effective C++ 条款3:尽可能使用const' 里提到的技巧
     T& operator[](unsigned i){
 		return const_cast<T &>(static_cast<const ArrayData &>(*this)[i]);
     }
     
-    // 支持指针操作(考虑const的情况)
-    operator const T*()const{ return data;}
-    operator T*(){return data;}
-
+    //有了Pointer 就不需要支持指针操作
+    // operator const T*()const{ return data;}
+    // operator T*(){return data;}
 
 	unsigned size;
     T *data;
@@ -35,12 +42,11 @@ public:
 };
 
 // 数组封装类
-template<typename T>
-class Pointer;
 template <typename T>
 class Array{
 public:
 	friend class Pointer<T>;
+
     Array(unsigned n=0):pa(new ArrayData<T>(n)){}
     ~Array(){if(--pa->used==0)delete pa;}
     
@@ -48,14 +54,14 @@ public:
     const T& operator[](unsigned i) const{
         return (*pa)[i];
     }
-    // effective C++里条款３：尽可能使用const 里提到的技巧
+    // 'effective C++ 条款3:尽可能使用const' 里提到的技巧
     T& operator[](unsigned i){
 		return const_cast<T &>(static_cast<const Array &>(*this)[i]);
     }
     
-    // 支持指针操作(考虑const的情况)
-    operator const T*()const{ return *(*pa);}
-    operator T*(){return *(*pa);}
+    //有了Pointer就 不需要支持指针操作(考虑const的情况)
+    //operator const T*()const{ return *(*pa);}
+    //operator T*(){return *(*pa);}
 private:
 	Array(const Array&);
     Array &operator=(const Array &);
@@ -86,6 +92,11 @@ private:
 	unsigned index;
 };
 
+// 为测试而定义的类
+class UserdefineClass {
+public:
+	void greeting() {cout << "hello world."<<endl;}
+};
 
 int main()
 {
@@ -93,16 +104,33 @@ int main()
 	int i;
 	for (i=0; i!=100; i++)	
 		(*ai)[i] = i;
-	Pointer<int> p1;
+
+	Pointer<int> *pp = NULL; 
+	
+	Pointer<int> p;
 	{
-		Pointer<int> p(*ai, 10);
-		p1 = p;
-		cout << *p << endl;
+		// 数组构造
+		Pointer<int> p1(*ai, 10);
+		// 拷贝构造
+		pp = new Pointer<int>(p1);
+		// 赋值操作符
+		p = p1;
+		// 解指针
+		cout << *p1 << endl;
 		delete ai;
+		cout << *p1 << endl;
 		cout << *p << endl;
 	}
-	cout << *p1 << endl;	
-	*p1 = 199;
-	cout << *p1 << endl;	
+	cout << *p << endl;	
+	*p = 199;
+	cout << *p << endl;	
+	cout << *(*pp) << endl;
+	
+	cout << endl;
+	Array<UserdefineClass> au(10) ;
+	Pointer<UserdefineClass> pua(au, 0);
+	// 间接引用
+	pua->greeting();
+
 	return 0;
 }
