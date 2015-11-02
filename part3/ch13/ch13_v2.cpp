@@ -74,7 +74,7 @@ template<typename T>
 class Pointer{
 public:
     Pointer():pa(0),index(0){}
-    Pointer(/*const 不能用const修饰, 后面有取地址的操作*/Array<T>& a, unsigned i=0):pa(a.pa),index(i){pa->used++;}
+    Pointer(Array<T>& a, unsigned i=0):pa(a.pa),index(i){pa->used++;}
     ~Pointer(){if(pa&&--pa->used==0)delete pa;}
     Pointer(const Pointer &p):pa(p.pa?p.pa:0), index(p.index){if(pa)pa->used++;}
     Pointer &operator=(const Pointer &p){
