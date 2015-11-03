@@ -270,9 +270,9 @@ Pointer<int> p(a, 1);
 *p = 1;  // 天啊，我们仍然可以修改一个const容器的元素！！！
 std::cout << a[1] << std::endl; 
 ```
-这里明显有几个问题：
+这里明显有几个问题：  
 第一，const Pointer的语义应该是Pointer本身是不可变的，而不是Pointer所指向的内容不可变；  
-第二，这样的设计，很容易造成他人的误用！  
+第二，这样的设计，很容易造成他人的误用！我们仍然可以通过一个Pointer对象修改一个const容器的元素.  
 所以，基于以上的讨论，我们得出的结论是，我们必须另外实现一个新的类(Ptr_to_const)，它类似于Pointer，但它指向const Array而不是Array。而且为了模拟内建指针的行为，我们支持Pointer类可以转换到这个新类。
 我们可以利用继承的概念，来实现新类和Pointer的关系。我们让Ptr_to_const作为父类，而Pointer作为子类。
 ```cpp
