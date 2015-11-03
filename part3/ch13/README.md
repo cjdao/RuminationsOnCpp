@@ -393,8 +393,9 @@ class Array{
 a.reserve(n); 
 a[n] = //某个值，实际上我们应该reserve(n+1)
 ```
-因此，我们最好总是保证reserve后Array的空间，总是大于reserve所申请的值。
-第二，我们前面讲过reverse函数，我们可以按块分配内存，以降低向系统申请内存的频率。所以综合第一点，我们的设计决策是，当reverse的值大于当前Array的size时，我们就将size按2倍的速率增长，直到size的值大于reverse的值。  
+因此，我们最好总是保证reserve后Array的空间，总是大于reserve所申请的值.   
+第二，我们前面讲过reverse函数，我们可以按块分配内存，以降低向系统申请内存的频率。  
+所以综上所述，我们的设计决策是，当reverse的值大于当前Array的size时，我们就将size按2倍的速率增长，直到size的值大于reverse的值。  
 ```cpp
 template <typename T>
 class ArrayData{
@@ -478,3 +479,12 @@ class Array{
 > Note：拷贝构造和赋值操作都没有涉及到引用计数的操作，因为这两个函数改变的是最底层(ArrayData所指内存)的改变，像Pointer不应该察觉到。
 
 [示例代码](https://github.com/cjdao/RuminationsOnCpp/blob/master/part3/ch13/ch13_v4.cpp)
+
+### 总结
+----------
+几个版本下来，又是要用引用计数，又是不用引用计数，在实现的时候很容易让人迷糊。  
+在使用类表示概念的设计过程中，我们需要时刻谨记那些句柄类在面对拷贝与赋值时，是共享底层资源还是拷贝底层资源的副本，这点很重要。如果涉及共享底层资源，那么就需要引入引用计数技术。
+像我们这基本版本的实现中:   
+Pointer在拷贝和赋值时，共享底层资源及ArrayData类，所以它使用了引用计数.  
+Array在拷贝和赋值时,拷贝底层资源的副本,所以它没有使用引用计数.但是它又在析构的时候使用了引用计数，那是因为它有可能跟Pointer类共享底层资源。  
+ArrayData在拷贝和赋值时, 拷贝底层资源的副本,所以它也没有使用引用计数.   
