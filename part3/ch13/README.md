@@ -199,7 +199,6 @@ private:
     unsigned index;
 };
 ```
-在上面的代码中，我们仅解决了question中提到的第一个问题。如果Array类存在resize方法（即Array支持动态扩容），那么question中提到的第二个问题，按照我们现在的解决放你，p和a都是有效的，但它们指向不同的东西了！这基本上不会是我们想要的。但是针对这个问题，本书并没有给出解决方案，所以我们先搁下，后面再讨论。
 
 [示例代码](https://github.com/cjdao/RuminationsOnCpp/blob/master/part3/ch13/ch13_v2.cpp)
 
@@ -272,8 +271,8 @@ Pointer<int> p(a, 1);
 std::cout << a[1] << std::endl; 
 ```
 这里明显有几个问题：
-第一，const Pointer的语义应该是Pointer本身是不可变的，而不是Pointer所指向的内容不可变；
-第二，这样的设计，很容易造成他人的误用！
+第一，const Pointer的语义应该是Pointer本身是不可变的，而不是Pointer所指向的内容不可变；  
+第二，这样的设计，很容易造成他人的误用！  
 所以，基于以上的讨论，我们得出的结论是，我们必须另外实现一个新的类(Ptr_to_const)，它类似于Pointer，但它指向const Array而不是Array。而且为了模拟内建指针的行为，我们支持Pointer类可以转换到这个新类。
 我们可以利用继承的概念，来实现新类和Pointer的关系。我们让Ptr_to_const作为父类，而Pointer作为子类。
 ```cpp
@@ -334,6 +333,148 @@ public:
 
 #### 第四个版本
 -------------
+这个版本来增强Array的功能。
+##### 新增功能一：让Array支持动态的改变大小。
+对于一个容器的用户而言，动态改变大小可以分为两种情况。
+* 用户明确知道容器的所需要的大小
+  对于这种情况，我们提供一个**resize**成员函数，让用户明确告诉我们，Array的大小
+* 用户在使用前不能确定容器的大小
+  对于这种情况，我们提供一个**reserve**成员函数，用来确保Array大小不小于某个值。reserve函数可以让Array按块增长，而不是每次只增加一个元素，这样就降低了向系统申请内存的频率了。
 
+首先我们来实现，ArrayData的resize成员函数：
+```cpp
+template <typename T>
+class ArrayData{
+//...
+    // 辅助函数
+    void copy(T *d, unsigned s) 
+    {
+        for (int i=0; i!=s; i++) {
+            data[i] = d[i];
+        }
+    }   
 
+    unsigned min(unsigned a, unsigned b) 
+    {
+        return a<b?a:b; 
+    }
 
+    void resize(unsigned news) 
+    {
+    	// 如果resize后的大小跟当前大小一样，那就什么都不做
+        if (news==size) return;
+
+        // 考虑异常安全性
+        T *nd = new T[n]; 
+        T *tmp = data;
+        data = nd; 
+        copy(tmp, min(size,news));
+        size = news;
+        delete [] tmp;
+    } 
+//...
+};
+```
+然后是Array的resize函数，相当简单:
+```cpp
+template <typename T>
+class Array{
+//...
+    void resize(unsigned s)
+    {
+       data->resize(s);
+    }
+//...
+};
+```
+下面看看reverse函数怎么实现。  
+第一，用户有可能会误用reverse函数，看下面的例子：
+```cpp
+a.reserve(n); 
+a[n] = //某个值，实际上我们应该reserve(n+1)
+```
+因此，我们最好总是保证reserve后Array的空间，总是大于reserve所申请的值。
+第二，我们前面讲过reverse函数，我们可以按块分配内存，以降低向系统申请内存的频率。所以综合第一点，我们的设计决策是，当reverse的值大于当前Array的size时，我们就将size按2倍的速率增长，直到size的值大于reverse的值。  
+```cpp
+template <typename T>
+class ArrayData{
+//...
+    void reserve(unsigned s) {
+    	// 如果我们的空间已经大于reserve的值，那就什么都不做
+        if (s<size) return ;
+
+        unsigned news = size;
+        if (news==0) news = 1;
+
+        while (news<=s) { // 这里不能是news<s,为了保证新空间总是大于reserve的值。
+            news *= 2;
+        }
+        resize(news);
+    }
+//...
+};
+
+template <typename T>
+class Array{
+//...
+    void reserve(unsigned s) 
+    {
+        data->reserve(s);
+    }
+
+//...
+};
+```
+##### 新增功能二：让Array支持拷贝与赋值。
+我们的resize实现中，要求其元素类型支持赋值操作，因此如果我们想要支持Array的Array时，我们的Array就必须支持赋值操作了。
+先来看看拷贝构造的实现，主要是实现ArrayData的拷贝构造，Array的就很简单了.
+```cpp
+template <typename T>
+class ArrayData{
+//...
+    ArrayData(const ArrayData& a):sz(a.sz),data(new T[sz], used(1)) {
+       copy(a.data,sz);
+    }
+//...
+};
+
+template <typename T>
+class Array { 
+//...
+    Array(const Array& a):pa(new ArrayData<T>(*(a.pa))) { }
+//...
+};
+```
+
+赋值操作不能直接使用ArrayData的赋值操作符，因为它会去操作引用计数。我们让ArrayData实现一个clone函数用于拷贝操作，Pointer不会察觉到该操作
+```cpp
+template <typename T>
+class ArrayData{
+//...
+    void clone(const ArrayData &a , unsigned s) {
+
+        if (s!=sz) {
+            T *ndata=new T[s];
+            sz = s;
+            delete []data;
+            data=ndata;
+        }
+        copy(a.data, sz);
+    }
+//...
+};
+
+template <typename T>
+class Array{
+//...
+    Array &operator=(const Array &a) {
+        if (this != &a)
+            pa->clone(*(a.pa), a.size());
+        return *this;
+    }
+//...
+```
+
+> Note：拷贝构造和赋值操作都没有涉及到引用计数的操作，因为这两个函数改变的是最底层(ArrayData所指内存)的改变，像Pointer不应该察觉到。
+
+[示例代码](https://github.com/cjdao/RuminationsOnCpp/blob/master/part3/ch13/ch13_v4.cpp)
