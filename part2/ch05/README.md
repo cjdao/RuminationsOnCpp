@@ -32,11 +32,7 @@ v.back().f(); //ERROR, output "f() in super ."
 
 * 第二种方案：
 ```cpp
-vector<Super &> v; //ERROR, 木有引用类型的容器啊
-```
-
-* 第三种方案：
-```cpp
+//vector<Super &> v; //ERROR, 木有引用类型的容器啊
 vector<Super *> v;
 
 v.push_back(new Sub1());
@@ -48,44 +44,80 @@ delete tmp;
 ```
 这种方法，虽然能够工作，但却为使用者带来了动态内容管理的负担。
 
-* 第四种方案
+* 第三种方案
 
-我们在方案三的基础上，添加一个**中间层**，用这个中间类(就叫Surrogate吧)来隐藏指针,并负责动态内存的管理。
+我们在方案二的基础上，添加一个**中间层**，用这个中间类(就叫Surrogate吧)来隐藏指针,并负责动态内存的管理。
 
-**使用类来表示概念**(在这里就是使用类来表示Super * 这个概念);
+**使用类来表示概念**(在这里就是使用类Surrogate来表示这个概念);
 
 #### 我们来看看该怎么设计这个中间类!
 
 从我们会怎样使用这个中间类开始:
 
+##### 如何构造
 首先它必须能被作为vector的元素类型，即:
 ```cpp
 vector<Surrogate> v;
 ```
 所以，Surrogate 必须有**默认构造函数**。
 
-然后，我们如何让一个Surrogate能够指向Sub继承树上的任何一类对象呢?
-让Surrogate有一个类型为‘Super * ’的数据成员，并通过Sub继承树上的任一类对象的拷贝构造Surrogate。
+我们如何让一个Surrogate能够指向Sub继承树上的任何一类对象呢?  
+能用的无非就是基类的指针类型或者引用类型了。我们决定使用指针类型，因为引用类型不如指针类型那么灵活。  
+我们让Surrogate内含一个类型为‘Super * ’的数据成员.  
+那么指针所指的对象该由谁来分配呢？
+最简单的实现方式，是由外面分配，Surrogate只负责释放，如下：
 ```cpp
-Surrogate s0(Super()); // 不能是这样Surrogate s0(new Super());
+class Surrogate{
+public:
+	Surrogate():p(0) {}   // Surrogate必须有默认构造函数!
+	Surrogate(const Super *const s):p(s) {}
+   
+    // Surrogate 只负责释放内存 
+    ~Surrogate() {delete p;}
+private:
+	Super *p;             // 不能是Super p 或者 Super &p
+};
+
+//所以我们的Surrogate类可以这么使用
+{
+    Surrogate s0(new Super()); 
+    Surrogate s1(new Sub1());
+    Surrogate s2(new Sub2());
+} // 此处将自动释放内存
+
+// 倘或有人这么用，那就杯具了
+{
+    Super a;
+    Surrogate s0(&a);
+}//首先a是栈上的内容，不能用delete来释放;其次，a将面临两次析构
+```
+通过上面的演示例子，单从"避免接口容易被误用"的原则出发，我们选择让Surrogate承担其所指对象分配的任务.    
+这种设计有点笨拙，我们让Surrogate有点类似于包含了代理对象，当我们要代理一个类时，我们这样做：
+```cpp
+Surrogate s0(Super()); 
 Surrogate s1(Sub1());
 Surrogate s2(Sub2());
 ```
+通过对外部类进行拷贝，然后在Surrogate内new出一个新对象来进行代理。所以我们代理的对象必须支持拷贝构造。
 
-所以，Surrogate的初步轮廓应该是这样的:
+Surrogate的初步轮廓应该是这样的:
 ```cpp
 class Surrogate{
 public:
 	Surrogate():p(0) {}   // Surrogate必须有默认构造函数!
 	Surrogate(const Super&s):p(new /*我们在这里要new什么啊?*/) {}
+
+    // Surrogate 负责释放内存 
+    ~Surrogate() {delete p;}
 private:
 	Super *p;             // 不能是Super p 或者 Super &p
 };
 ```
+##### 如何实现运行时的多态拷贝
 在上面的Surrogate定义中，我们在第二个构造函数里遇到了问题，根据定义我们无法知道运行时的参数s到底是Sub继承树上的哪一个类,
 所以我们就无法new出我们期望的实体！
 
-解决这个问题的技巧在于，让Super定义一个叫clone的virtual函数，由各子类继承实现。因此我们的继承树就变成了这样：
+解决这个问题的一个技巧，让被代理类Super定义一个叫clone的virtual函数，由各子类继承实现。因此我们的继承树就变成了这样：
 ```cpp
 class Super{
 public:
@@ -109,12 +141,42 @@ class Surrogate{
 public:
         Surrogate():p(0) {}   // Surrogate必须有默认构造函数!
         Surrogate(const Super&s):p(s.clone()) {}
+
+        // Surrogate 负责释放内存 
+        ~Surrogate() {delete p;}
 private:
         Super *p;             // 不能是Super p 或者 Super &p
 };
 ```
 
-#### 我们怎么通过Surrogate访问Super中的方法？
+##### 接下来的一个问题是，我们怎么处理Surrogate类间的拷贝构造和赋值。  
+这里我们面临两重选择：  
+1. 支不支持类间的拷贝构造和赋值
+2. 如果支持，类间的拷贝构造和赋值，意味着什么，共享底层资源还是拷贝底层资源
+我们是选择是Surrogate支持类间的拷贝构造和赋值，其实现是拷贝底层资源。  
+所以，现在Surrogate看起来是这样子的：
+```cpp
+class Surrogate{
+public:
+        Surrogate():p(0) {}   // Surrogate必须有默认构造函数!
+        Surrogate(const Super&s):p(s.clone()) {}
+        Surrogate(const Surrogate&s):p(s.p?s.p->clone():0) {}
+        Surrogate &operator=(const Surrogate &s){
+                if (this!=&s) {
+                        delete p;
+                        p = s.p->clone();
+                }
+                return *this;
+        }
+        ~Surrogate(){delete p;}
+
+private:
+        Super *p;
+};
+```
+
+
+##### 最后一个问题，我们怎么通过Surrogate访问Super中的方法？
 * 方案一：直接在Surrogate中定义Super相应的方法
 ```cpp
 class Surrogate{
@@ -156,12 +218,10 @@ s.get()->f();
 // s.get().f();
 ```
 
-* 方案四：不知道无没有
+* 方案四：不知道有木有
 
-#### 最后不要忘了
-Surrogate的拷贝构造函数，赋值操作符，及虚构函数!!!
 
-完整的Surrogate:
+比较完整的Surrogate:
 ```cpp
 class Surrogate{
 public:
@@ -189,9 +249,7 @@ public:
 private:
         Super *p;             // 不能是Super p 或者 Super &p
 };
-
 ```
-
 
 ### Code:
 
