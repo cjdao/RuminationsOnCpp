@@ -151,15 +151,17 @@ private:
 
 ##### 接下来的一个问题是，我们怎么处理Surrogate类间的拷贝构造和赋值。  
 这里我们面临两重选择：  
-1. 支不支持类间的拷贝构造和赋值
+1. 支不支持类间的拷贝构造和赋值  
 2. 如果支持，类间的拷贝构造和赋值，意味着什么，共享底层资源还是拷贝底层资源
-我们是选择是Surrogate支持类间的拷贝构造和赋值，其实现是拷贝底层资源。  
+我们的选择是让Surrogate支持类间的拷贝构造和赋值，其实现是拷贝底层资源。  
 所以，现在Surrogate看起来是这样子的：
 ```cpp
 class Surrogate{
 public:
         Surrogate():p(0) {}   // Surrogate必须有默认构造函数!
         Surrogate(const Super&s):p(s.clone()) {}
+        ~Surrogate(){delete p;}
+
         Surrogate(const Surrogate&s):p(s.p?s.p->clone():0) {}
         Surrogate &operator=(const Surrogate &s){
                 if (this!=&s) {
@@ -168,7 +170,6 @@ public:
                 }
                 return *this;
         }
-        ~Surrogate(){delete p;}
 
 private:
         Super *p;
