@@ -23,7 +23,7 @@ public:
 // 代理类
 class Surrogate{
 public:
-        Surrogate():p(0) {}   // Surrogate必须有默认构造函数!
+        Surrogate():p(0) {}   
         Surrogate(const Super&s):p(s.clone()) {}
         Surrogate(const Surrogate&s):p(s.p?s.p->clone():0) {}
         Surrogate &operator=(const Surrogate &s){
@@ -45,7 +45,7 @@ public:
         //Super &get(){return *p;}
 
 private:
-        Super *p;             // 不能是Super p 或者 Super &p
+        Super *p;            
 };
 
 int main()
