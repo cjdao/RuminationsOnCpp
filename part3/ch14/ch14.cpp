@@ -141,6 +141,10 @@ private:
 // 指向const Array的指针类
 template<typename T>
 class Ptr_to_const{
+friend bool operator==(const Ptr_to_const &lhs, const Ptr_to_const &rhs);
+friend bool operator!=(const Ptr_to_const &lhs, const Ptr_to_const &rhs);
+friend int operator-(const Ptr_to_const &lhs, const Ptr_to_const &rhs); 
+
 public:
     Ptr_to_const():pa(0),index(0){}
     Ptr_to_const(const Array<T>& a, unsigned i=0):pa(a.pa),index(i){pa->used++;}
@@ -164,6 +168,29 @@ public:
         if (0==pa)throw "* of unbound Pointer";
         else return ((*pa)[index]);
     }
+
+    // 完善Ptr_to_const类的++ -- != 及==操作
+    Ptr_to_const& operator++() {
+        index++;
+        return *this;
+    }
+
+    Ptr_to_const operator++(int){
+        Ptr_to_const tmp(*this);  
+        ++(*this); 
+        return tmp;
+    }
+
+    Ptr_to_const& operator--() {
+        index--;
+        return *this;
+    }
+
+    Ptr_to_const operator--(int){
+        Ptr_to_const tmp(*this);  
+        ++(*this); 
+        return tmp;
+    } 
 
 //这里必须是protected的了
 protected:
@@ -214,15 +241,26 @@ public:
         return tmp;
     } 
 
-    bool operator==(const Pointer &p) {
-        return (pa==p.pa && index==p.index);
-    }
-
-    bool operator!=(const Pointer &p) {
-        return !(*this == p);
-    }
+    
 };
 
+
+template<typename T>
+int operator-(const Ptr_to_const<T> &lhs, const Ptr_to_const<T> &rhs) {
+    if (lhs.pa!=rhs.pa)
+        throw "";
+    return lhs.index-rhs.index;
+}
+
+template<typename T>
+bool operator==(const Ptr_to_const<T> &lhs, const Ptr_to_const<T> &rhs) {
+    return (lhs.pa==rhs.pa && lhs.index==rhs.index);
+}
+
+template<typename T>
+bool operator!=(const Ptr_to_const<T> &lhs, const Ptr_to_const<T> &rhs) {
+    return !(lhs == rhs);
+}
 
 int main()
 {
