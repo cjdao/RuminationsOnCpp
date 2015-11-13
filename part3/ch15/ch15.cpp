@@ -19,7 +19,7 @@ template<typename T>
 class Seq {
 public:
     Seq():item(0){};
-    Seq(T &v, const Seq& s):item(new SeqItem<T>(v,s.item)){if (item->next)++item->next->use;};
+    Seq(T &v, const Seq& s):item(new SeqItem<T>(v,s.item)){};
     Seq(const Seq& s):item(s.item){if (item) ++item->use;};
 
     Seq& operator=(const Seq& s) {// s 并没有被改写，只是s.item->use被改写了, 所以可以用const修饰！！！
@@ -43,6 +43,19 @@ public:
     };
 
     operator bool() { return item!=0; };
+
+    Seq& operator++() {
+        if (item) {
+            SeqItem<T> *temp = item;
+            item = item->next;
+            if (--item->use==0) delete temp;
+        }
+        return *this;    
+    }
+    
+    T operator*()const{
+        return hd(); 
+    }
 
 private:
     void destroy(SeqItem<T> *i) {
